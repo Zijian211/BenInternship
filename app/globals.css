@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 245, 245, 245;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb)))
+    rgb(var(--background-start-rgb));
+  overflow: hidden;
+}
+
+/* --- CUSTOM BUTTON STYLES --- */
+@layer components {
+  /* Group 1: Monitoring (Blue Theme) */
+  .btn-monitoring {
+    @apply bg-blue-50 text-slate-700 hover:bg-blue-100; /* Light Blue Base */
+  }
+  .btn-monitoring-active {
+    @apply bg-blue-600 text-white shadow-md; /* Dark Blue Active */
+  }
+
+  /* Group 2: Management (Grey Theme) */
+  .btn-management {
+    @apply bg-gray-50 text-slate-700 hover:bg-gray-200; /* Light Grey Base */
+  }
+  .btn-management-active {
+    @apply bg-slate-600 text-white shadow-md; /* Dark Grey Active */
+  }
+}
