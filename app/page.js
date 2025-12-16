@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-// --- IMPORTS ---
 import MonitoringMenu, { MONITORING_ITEMS } from "./components/menu/MonitoringMenu";
 import ManagementMenu, { MANAGEMENT_ITEMS } from "./components/menu/ManagementMenu";
-import StationPowerChart from "./components/charts/StationPowerChart"; // <--- Import your new component
+import StationPowerChart from "./components/charts/StationPowerChart";
+import InverterCard from "./components/cards/InverterCard"; 
 
 const ALL_ITEMS = [...MONITORING_ITEMS, ...MANAGEMENT_ITEMS];
 
@@ -17,33 +17,60 @@ export default function Dashboard() {
 
   // --- FETCH DATA ---
   useEffect(() => {
+    // CRITICAL FIX: Reset data immediately to prevent "map is not a function" error
+    setStationData(null); 
+    setLoading(true);
+
+    // STATION TAB LOGIC
     if (activeTab === 'station') {
-      setLoading(true);
       fetch('/api/monitoring/station')
         .then((res) => res.json())
         .then((json) => {
-          if (json.data) {
-            setStationData(json.data);
-          }
+          if (json.data) setStationData(json.data);
         })
-        .catch((err) => console.error("API Error:", err))
+        .catch((err) => console.error("Station API Error:", err))
         .finally(() => setLoading(false));
+    }
+    
+    // INVERTER TAB LOGIC
+    else if (activeTab === 'inverter') {
+      fetch('/api/monitoring/inverter')
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.data) setStationData(json.data);
+        })
+        .catch((err) => console.error("Inverter API Error:", err))
+        .finally(() => setLoading(false));
+    }
+
+    // OTHER TABS (Stop loading immediately)
+    else {
+      setLoading(false);
     }
   }, [activeTab]);
 
   // --- RENDER CONTENT ---
   const renderContent = () => {
-    // 1. STATION STATUS TAB
-    if (activeTab === 'station') {
-      if (loading) return <div className="p-10 text-gray-400 animate-pulse">Loading Station Data...</div>;
-      if (!stationData) return <div className="p-10 text-red-400">Data Error</div>;
+    
+    // LOADING STATE
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
+          <p>Loading System Data...</p>
+        </div>
+      );
+    }
+
+    // STATION STATUS TAB
+    if (activeTab === 'station' && stationData) {
+      // Safety check: Ensure we have the right data shape for Station
+      if (!stationData.kpi || !stationData.trend) return null;
 
       const { kpi, trend } = stationData;
-
       return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* A. KPI CARDS */}
+          {/* KPI CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-6 bg-blue-50 border border-blue-100 rounded-xl shadow-sm">
                <div className="text-sm text-blue-600 font-bold uppercase mb-1">Real-Time Power</div>
@@ -71,18 +98,31 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* B. THE CHART COMPONENT */}
+          {/* CHART COMPONENT */}
           <StationPowerChart data={trend} />
-          
         </div>
       );
     }
 
-    // 2. OTHER TABS (Placeholder)
+    // SCENARIO 3: INVERTER TAB
+    // Safety check: Ensure stationData is actually an Array before mapping
+    if (activeTab === 'inverter' && stationData && Array.isArray(stationData)) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
+          {stationData.map((inv) => (
+            <InverterCard key={inv.id} data={inv} />
+          ))}
+        </div>
+      );
+    }
+
+    // SCENARIO 4: OTHER TABS / EMPTY STATE
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-300">
         <currentItem.icon size={64} className="mb-4 opacity-20" />
-        <p className="text-xl font-medium">{currentItem.cn} Content Loading...</p>
+        <p className="text-xl font-medium">
+          {stationData ? "Data Loaded" : `${currentItem.cn} Content Loading...`}
+        </p>
       </div>
     );
   };
