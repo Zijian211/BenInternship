@@ -71,3 +71,13 @@ export const MOCK_CAMERAS = [
   { id: "CAM-03", name: "PV Field North", status: "online", url: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=800&q=80" },
   { id: "CAM-04", name: "Substation", status: "offline", url: "" }, // Simulated offline camera
 ];
+
+// SENSORS (Weather Station & Environment)
+export const MOCK_SENSORS = [
+  { id: "S-01", name: "Global Irradiance", value: 865, unit: "W/m²", type: "sun", status: "normal", trend: "+12%" },
+  { id: "S-02", name: "Module Temp", value: 48.2, unit: "°C", type: "temp", status: "warning", trend: "+5%" }, // Hot panels reduce efficiency
+  { id: "S-03", name: "Ambient Temp", value: 32.5, unit: "°C", type: "temp", status: "normal", trend: "+2%" },
+  { id: "S-04", name: "Wind Speed", value: 3.4, unit: "m/s", type: "wind", status: "normal", trend: "-10%" },
+  { id: "S-05", name: "Humidity", value: 45, unit: "%", type: "water", status: "normal", trend: "0%" },
+  { id: "S-06", name: "Rainfall", value: 0, unit: "mm", type: "water", status: "normal", trend: "0%" },
+];

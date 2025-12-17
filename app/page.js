@@ -8,6 +8,7 @@ import StationPowerCard from "./components/cards/StationPowerCard";
 import InverterCard from "./components/cards/InverterCard";
 import ModuleMatrixView from "./components/views/ModuleMatrixView";
 import CameraGridView from "./components/views/CameraGridView";
+import SensorCard from "./components/cards/SensorCard";
 
 const ALL_ITEMS = [...MONITORING_ITEMS, ...MANAGEMENT_ITEMS];
 
@@ -66,6 +67,17 @@ export default function Dashboard() {
         .catch((err) => console.error("Camera API Error:", err))
         .finally(() => setLoading(false));}
     
+    // SENSOR TAB LOGIC
+    else if (activeTab === 'sensors') {
+       fetch('/api/monitoring/sensor')
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.data) setStationData(json.data);
+        })
+        .catch((err) => console.error("Sensor API Error:", err))
+        .finally(() => setLoading(false));
+    }
+    
     // OTHER TABS
     else {
       setLoading(false);
@@ -116,11 +128,17 @@ export default function Dashboard() {
     if (activeTab === 'module' && stationData && Array.isArray(stationData)) {
       return <ModuleMatrixView data={stationData} />;
     }
+
     // CAMERA GRID TAB
     if (activeTab === 'camera' && stationData && Array.isArray(stationData)) {
       return <CameraGridView data={stationData} />;
     }
-    
+
+    // SENSOR TAB
+    if (activeTab === 'sensors' && stationData && Array.isArray(stationData)) {
+      return <SensorCard data={stationData} />;
+    }
+
     // OTHER TABS / EMPTY STATE
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-300">
