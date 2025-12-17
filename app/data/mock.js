@@ -89,3 +89,12 @@ export const MOCK_FIELD = [
   { id: "ZONE-C", name: "South Array", power: 100, capacity: 500, status: "offline", x: 30, y: 70 },
   { id: "ZONE-D", name: "Central Roof", power: 280, capacity: 300, status: "normal", x: 65, y: 65 },
 ];
+
+// ROBOT FLEET
+export const MOCK_ROBOTS = [
+  { id: "R-01", name: "Cleaner Alpha", type: "cleaning", battery: 85, status: "working", location: "Zone A" },
+  { id: "R-02", name: "Cleaner Beta", type: "cleaning", battery: 12, status: "charging", location: "Docking Stn" },
+  { id: "R-03", name: "Cleaner Gamma", type: "cleaning", battery: 45, status: "idle", location: "Zone B" },
+  { id: "D-01", name: "Inspector X", type: "drone", battery: 92, status: "working", location: "Zone C (Air)" },
+  { id: "R-04", name: "Cleaner Delta", type: "cleaning", battery: 0, status: "error", location: "Zone D" },
+];

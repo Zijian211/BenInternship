@@ -11,6 +11,7 @@ import ModuleMatrixView from "./components/views/ModuleMatrixView";
 import CameraGridView from "./components/views/CameraGridView";
 import SensorCard from "./components/cards/SensorCard";
 import FieldMap from "./components/charts/FieldMap";
+import RobotView from "./components/views/RobotView";
 
 const ALL_ITEMS = [...MONITORING_ITEMS, ...MANAGEMENT_ITEMS];
 
@@ -90,6 +91,17 @@ export default function Dashboard() {
         .catch((err) => console.error("Field API Error:", err))
         .finally(() => setLoading(false));
     }
+
+    // ROBOT TAB LOGIC
+    else if (activeTab === 'robots') {
+       fetch('/api/monitoring/robot')
+       .then((res) => res.json())
+        .then((json) => {
+          if (json.data) setStationData(json.data);
+        })
+        .catch((err) => console.error("Robot API Error:", err))
+        .finally(() => setLoading(false));
+    }
     
     // OTHER TABS
     else {
@@ -155,6 +167,11 @@ export default function Dashboard() {
     // FIELD VIEW TAB
     if (activeTab === 'field' && stationData && Array.isArray(stationData)) {
       return <FieldMap data={stationData} />;
+    }
+
+    // ROBOT VIEW TAB
+    if (activeTab === 'robots' && stationData && Array.isArray(stationData)) {
+      return <RobotView data={stationData} />;
     }
 
     // OTHER TABS / EMPTY STATE
