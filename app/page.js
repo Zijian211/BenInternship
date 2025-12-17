@@ -5,7 +5,8 @@ import MonitoringMenu, { MONITORING_ITEMS } from "./components/menu/MonitoringMe
 import ManagementMenu, { MANAGEMENT_ITEMS } from "./components/menu/ManagementMenu";
 import StationPowerChart from "./components/charts/StationPowerChart";
 import StationPowerCard from "./components/cards/StationPowerCard"; 
-import InverterCard from "./components/cards/InverterCard"; 
+import InverterCard from "./components/cards/InverterCard";
+import ModuleMatrixView from "./components/views/ModuleMatrixView";
 
 const ALL_ITEMS = [...MONITORING_ITEMS, ...MANAGEMENT_ITEMS];
 
@@ -31,7 +32,7 @@ export default function Dashboard() {
         .catch((err) => console.error("Station API Error:", err))
         .finally(() => setLoading(false));
     }
-    
+
     // INVERTER TAB LOGIC
     else if (activeTab === 'inverter') {
       fetch('/api/monitoring/inverter')
@@ -40,6 +41,17 @@ export default function Dashboard() {
           if (json.data) setStationData(json.data);
         })
         .catch((err) => console.error("Inverter API Error:", err))
+        .finally(() => setLoading(false));
+    }
+
+    // MODULE TAB LOGIC
+    else if (activeTab === 'module') {
+      fetch('/api/monitoring/module')
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.data) setStationData(json.data);
+        })
+        .catch((err) => console.error("Module API Error:", err))
         .finally(() => setLoading(false));
     }
 
@@ -69,7 +81,7 @@ export default function Dashboard() {
       return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* Cards COMPONENT */}
+          {/* NEW: REPLACED LONG HTML WITH COMPONENT */}
           <StationPowerCard data={kpi} />
 
           {/* CHART COMPONENT */}
@@ -89,6 +101,11 @@ export default function Dashboard() {
       );
     }
 
+    // MODULE MATRIX TAB
+    if (activeTab === 'module' && stationData && Array.isArray(stationData)) {
+      return <ModuleMatrixView data={stationData} />;
+    }
+    
     // OTHER TABS / EMPTY STATE
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-300">

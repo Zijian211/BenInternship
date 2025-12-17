@@ -26,3 +26,40 @@ export const MOCK_INVERTERS = [
   { id: "INV-003", status: "Normal", efficiency: 98.2, temp: 41 },
   { id: "INV-004", status: "Offline", efficiency: 0, temp: 20 },
 ];
+
+// MODULE MATRIX (Strings of solar panels)
+export const MOCK_MODULES = [
+  { 
+    id: "STR-A01", 
+    status: "normal", 
+    panels: Array(20).fill({ v: 33.5, c: 9.1, status: "normal" }) 
+  },
+  { 
+    id: "STR-A02", 
+    status: "warning", 
+    panels: Array(20).fill(null).map((_, i) => ({ 
+      v: i === 4 ? 0 : 33.2, 
+      c: i === 4 ? 0 : 9.0, 
+      status: i === 4 ? "offline" : "normal" 
+    })) 
+  },
+  { 
+    id: "STR-B01", 
+    status: "normal", 
+    panels: Array(20).fill({ v: 33.4, c: 9.1, status: "normal" }) 
+  },
+  { 
+    id: "STR-B02", 
+    status: "error", 
+    panels: Array(20).fill(null).map((_, i) => ({ 
+      v: i === 15 ? 45.0 : 33.1, 
+      c: i === 15 ? 12.0 : 9.0, 
+      status: i === 15 ? "fault" : "normal" 
+    })) 
+  },
+  { 
+    id: "STR-C01", 
+    status: "normal", 
+    panels: Array(20).fill({ v: 33.6, c: 9.2, status: "normal" }) 
+  },
+];
