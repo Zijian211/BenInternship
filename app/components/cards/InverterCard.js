@@ -1,6 +1,5 @@
-"use client";
 import React from "react";
-import { Zap, Thermometer, Activity, AlertTriangle } from "lucide-react";
+import { Zap, Thermometer, Activity, AlertTriangle, MapPin } from "lucide-react";
 
 export default function InverterCard({ data }) {
   // Determine Color Theme based on Status
@@ -16,43 +15,52 @@ export default function InverterCard({ data }) {
   const themeClass = getStatusColor(data.status);
 
   return (
-    <div className={`border rounded-xl p-4 shadow-sm hover:shadow-md transition-all ${themeClass}`}>
-      {/* HEADER: ID and Status Icon */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
-          <Zap size={20} />
-          <span className="font-bold text-lg">{data.id}</span>
+    <div className={`border rounded-xl p-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden bg-white ${themeClass.replace('bg-', 'border-')}`}>
+      
+      {/* ID and Status Icon */}
+      <div className="flex justify-between items-start mb-4">
+        <div>
+           <div className="flex items-center gap-2 text-slate-700">
+             <div className={`p-1.5 rounded-lg ${themeClass}`}>
+                <Zap size={20} />
+             </div>
+             <span className="font-bold text-lg">{data.id}</span>
+           </div>
+           
+           {/* Zone Location Badge */}
+           <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 ml-1 font-medium">
+             <MapPin size={10} />
+             <span>{data.zoneName}</span>
+           </div>
         </div>
-        <span className="text-xs font-bold uppercase tracking-wider border border-current px-2 py-1 rounded-full">
+
+        <span className={`text-[10px] font-bold uppercase tracking-wider border border-current px-2 py-0.5 rounded-full ${themeClass}`}>
           {data.status}
         </span>
       </div>
 
       {/* METRICS GRID */}
-      <div className="grid grid-cols-2 gap-4">
-        
+      <div className="grid grid-cols-2 gap-3">
         {/* Efficiency */}
-        <div className="bg-white/60 rounded-lg p-2">
-          <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2.5">
+          <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-bold mb-1">
             <Activity size={12} /> Efficiency
           </div>
-          <div className="text-xl font-bold">
-            {data.efficiency}%
+          <div className="text-xl font-black text-slate-700">
+            {data.efficiency}<span className="text-sm text-slate-400">%</span>
           </div>
         </div>
 
         {/* Temperature */}
-        <div className="bg-white/60 rounded-lg p-2">
-          <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2.5">
+          <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-bold mb-1">
             <Thermometer size={12} /> Temp
           </div>
-          <div className="text-xl font-bold flex items-center">
-            {data.temp}°C
-            {/* Show warning icon if hot */}
-            {data.temp > 50 && <AlertTriangle size={16} className="text-red-500 ml-1" />}
+          <div className="text-xl font-black text-slate-700 flex items-center gap-1">
+            {data.temp}°
+            {data.temp > 50 && <AlertTriangle size={14} className="text-red-500 animate-pulse" />}
           </div>
         </div>
-
       </div>
     </div>
   );

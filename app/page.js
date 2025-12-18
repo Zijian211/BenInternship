@@ -9,7 +9,7 @@ import GitHubLink from "./components/menu/GitHubLink";
 import StationPowerChart from "./components/charts/StationPowerChart";
 import StationPowerCard from "./components/cards/StationPowerCard";
 import StationMap from "./components/charts/StationMap";
-import InverterCard from "./components/cards/InverterCard";
+import InverterView from "./components/views/InverterView";
 import ModuleMatrixView from "./components/views/ModuleMatrixView";
 import CameraGridView from "./components/views/CameraGridView";
 import SensorCard from "./components/cards/SensorCard";
@@ -21,9 +21,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("station"); // Default to Station
   const [stationData, setStationData] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // Get current Page Title based on activeTab
-  const currentItem = getItemDetails(activeTab);
+  const currentItem = getItemDetails(activeTab); // Get current Page Title based on activeTab
 
   // --- FETCH DATA ---
   useEffect(() => {
@@ -95,11 +93,7 @@ if (activeTab === 'station' && stationData) {
 
     if (activeTab === 'field' && stationData && Array.isArray(stationData)) return <FieldMap data={stationData} />;
     if (activeTab === 'inverter' && stationData && Array.isArray(stationData)) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">
-          {stationData.map((inv) => <InverterCard key={inv.id} data={inv} />)}
-        </div>
-      );
+      return <InverterView data={stationData} />;
     }
     if (activeTab === 'module' && stationData && Array.isArray(stationData)) return <ModuleMatrixView data={stationData} />;
     if (activeTab === 'sensors' && stationData && Array.isArray(stationData)) return <SensorCard data={stationData} />;
