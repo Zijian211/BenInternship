@@ -31,7 +31,8 @@ export default function StationMap({ data }) {
                 <div key={rIndex} className="flex justify-center gap-0.5">
                   {row.map((cell, cIndex) => {
                     // Determine Color based on Status Code
-                    let colorClass = "opacity-0"; // Default empty (0)
+                    let colorClass = "opacity-0 pointer-events-none";
+                    
                     if (cell === 1) colorClass = "bg-green-500 hover:bg-green-400 cursor-pointer";
                     if (cell === 2) colorClass = "bg-yellow-400 hover:bg-yellow-300 cursor-pointer";
                     if (cell === 3) colorClass = "bg-red-500 hover:bg-red-400 cursor-pointer animate-pulse";
@@ -40,7 +41,8 @@ export default function StationMap({ data }) {
                       <div 
                         key={`${rIndex}-${cIndex}`} 
                         className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-[1px] transition-colors ${colorClass}`} 
-                        title={`R${rIndex}:C${cIndex} - ${cell === 3 ? 'FAULT' : 'OK'}`}
+                        // Only show title if cell is NOT 0 (empty)
+                        title={cell !== 0 ? `R${rIndex}:C${cIndex} - ${cell === 3 ? 'FAULT' : 'OK'}` : undefined}
                       />
                     );
                   })}

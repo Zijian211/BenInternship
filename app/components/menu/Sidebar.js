@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { 
-  Video, Camera, // Icon for Monitoring
-  LayoutDashboard, Map, Zap, Grid3x3, Wind, Bot, Server, // Sub-items for it
-  ClipboardCheck, BarChart3, Stethoscope, TrendingUp, // Other items
-  ChevronDown, ChevronRight // Arrows
+  Video, Camera, 
+  LayoutDashboard, Map, Zap, Grid3x3, Wind, Bot, Server, 
+  ClipboardCheck, BarChart3, Stethoscope, TrendingUp, 
+  ChevronDown, ChevronRight 
 } from "lucide-react";
 
 // Define the MENU STRUCTURE
@@ -25,21 +25,18 @@ const MENU_STRUCTURE = [
       { id: "camera", label: "摄像头", sub: "CAMERA", icon: Camera },
     ]
   },
-  { id: "inspection", label: "巡检作业", sub: "INSPECTION", icon: ClipboardCheck, type: "link" },
-  { id: "analysis", label: "数据分析", sub: "DATA ANALYSIS", icon: BarChart3, type: "link" },
-  { id: "smart_om", label: "智能运维", sub: "SMART O&M", icon: Stethoscope, type: "link" },
-  { id: "market", label: "市场监控", sub: "MARKET MONITOR", icon: TrendingUp, type: "link" },
+  { id: "inspection", label: "巡检作业", subLabel: "INSPECTION", icon: ClipboardCheck, type: "link" },
+  { id: "analysis", label: "数据分析", subLabel: "DATA ANALYSIS", icon: BarChart3, type: "link" },
+  { id: "smart_om", label: "智能运维", subLabel: "SMART O&M", icon: Stethoscope, type: "link" },
+  { id: "market", label: "市场监控", subLabel: "MARKET MONITOR", icon: TrendingUp, type: "link" },
 ];
 
 export default function Sidebar({ activeTab, setActiveTab }) {
-  // State to toggle the CCTV menu open/closed
   const [isCctvOpen, setIsCctvOpen] = useState(true);
 
-  // Helper to check if a main button is active
   const isMainActive = (item) => {
     if (item.type === 'link') return activeTab === item.id;
     if (item.type === 'parent') {
-      // CCTV is "active" (highlighted) if one of its children is selected
       return item.children.some(child => child.id === activeTab);
     }
     return false;
@@ -53,8 +50,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           {/* MAIN BUTTON */}
           <button
             onClick={() => {
-              if (item.type === 'parent') setIsCctvOpen(!isCctvOpen); // Toggle Menu
-              else setActiveTab(item.id); // Set Active Tab
+              if (item.type === 'parent') setIsCctvOpen(!isCctvOpen);
+              else setActiveTab(item.id);
             }}
             className={`btn-main ${isMainActive(item) ? 'btn-main-active' : ''}`}
           >
@@ -65,7 +62,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 <span className="text-[10px] font-normal opacity-70">{item.subLabel}</span>
               </div>
             </div>
-            {/* Show Arrow for Dropdown Menus */}
             {item.type === 'parent' && (
               <div className="text-slate-400">
                 {isCctvOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -73,7 +69,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             )}
           </button>
 
-          {/* SUB-MENU ITEMS (Only for Parent types) */}
+          {/* SUB-MENU ITEMS */}
           {item.type === 'parent' && isCctvOpen && (
             <div className="flex flex-col gap-1 mt-1 animate-in slide-in-from-top-2 duration-200">
               {item.children.map((sub) => (
