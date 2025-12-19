@@ -1,148 +1,199 @@
-// --- 1. PHYSICAL LAYER GENERATION (The "Source of Truth") ---
+// --- 1. CONFIGURATION ---
+const ZONES = {
+  Z01: { id: "Z-01", name: "North Field", capacity: 500, rows: 12, cols: 24, invCount: 2 }, 
+  Z02: { id: "Z-02", name: "South Field", capacity: 500, rows: 12, cols: 24, invCount: 2 },
+  Z03: { id: "Z-03", name: "East Array",  capacity: 300, rows: 10, cols: 20, invCount: 3 },
+  Z04: { id: "Z-04", name: "West Ext",    capacity: 200, rows: 8,  cols: 18, invCount: 2 }
+};
 
-// Generates irregular grid for the Map
-const generateZoneMatrix = (rows, cols) => {
+// --- 2. PHYSICS ENGINE ---
+const calculatePowerOutput = (capacityKw, irradiance, temp, isOffline = false) => {
+  if (isOffline) return 0; // If offline, 0 power
+  
+  const sunFactor = irradiance / 1000; 
+  const heatLoss = temp > 25 ? (temp - 25) * 0.004 : 0; 
+  const systemEff = 0.96;
+  let output = capacityKw * sunFactor * (1 - heatLoss) * systemEff;
+  return Math.max(0, parseFloat(output.toFixed(1)));
+};
+
+// --- 3. FIELD CONDITIONS ---
+const CONDITIONS = [
+  // NORTH: Healthy
+  { zone: ZONES.Z01, irradiance: 950, temp: 32, wind: 5.5 },
+  // SOUTH: Overheating (Warning)
+  { zone: ZONES.Z02, irradiance: 960, temp: 68, wind: 1.2 },
+  // EAST: Cloudy
+  { zone: ZONES.Z03, irradiance: 350, temp: 24, wind: 8.0 },
+  // WEST: CRITICAL FAULT (Offline)
+  { zone: ZONES.Z04, irradiance: 880, temp: 29, wind: 4.5 },
+];
+
+// --- 4. MAP & ID GENERATOR (THE CORE LOGIC) ---
+const generateZoneData = (zoneConfig, temp) => {
+  const { rows, cols, id } = zoneConfig;
   const matrix = [];
+  const flatModules = []; 
+  
+  let moduleCounter = 0;
+  const panelsPerString = 20;
+
+  // Base Status Logic
+  let baseStatus = "normal";
+  if (temp > 60) baseStatus = "warning"; // South Field
+  if (id === "Z-04") baseStatus = "fault"; // West Field (Hard Fault)
+
   for (let r = 0; r < rows; r++) {
     const row = [];
     for (let c = 0; c < cols; c++) {
-      // Create holes/irregularities to look realistic
-      const isVoid = (r < 2 && c < 5) || (r > rows - 4 && c > cols - 6) || Math.random() > 0.96;
-      if (isVoid) {
-        row.push(0); 
+      
+      // --- LOGIC FOR VOIDS (White Spaces) ---
+      // 1. Structural Cuts (Corners & Roads)
+      const isCornerCut = (r < 2 && c < 3) || (r > rows - 3 && c > cols - 4);
+      const isCentralRoad = (c === Math.floor(cols / 2)); 
+      
+      // 2. Organic Random Voids (3% chance of a hole anywhere)
+      // This mimics real-world uneven terrain
+      const isRandomVoid = Math.random() > 0.97;
+
+      if (isCornerCut || isCentralRoad || isRandomVoid) {
+        row.push(null); // NULL = White Space
       } else {
-        // Random Status for Map: 98% Normal(1), Warn(2), Fault(3)
-        const rand = Math.random();
-        let status = 1; 
-        if (rand > 0.995) status = 3; 
-        else if (rand > 0.98) status = 2; 
-        row.push(status);
+        // --- LOGIC FOR MODULES ---
+        moduleCounter++;
+        
+        // Assign String/Panel IDs
+        const currentStringNum = Math.ceil(moduleCounter / panelsPerString);
+        const panelNumInString = ((moduleCounter - 1) % panelsPerString) + 1;
+        
+        const stringId = `STR-${id.split('-')[1]}-${currentStringNum.toString().padStart(2, '0')}`;
+        const panelId = `P-${panelNumInString.toString().padStart(2, '0')}`;
+        const uniqueKey = `${stringId}-${panelId}`;
+
+        // Random Fault Injection (1% chance), unless whole zone is faulted
+        const isRandomBroken = Math.random() > 0.99; 
+        let status = baseStatus;
+        if (baseStatus !== "fault" && isRandomBroken) status = "fault";
+
+        const cellData = {
+          type: "module",
+          status: status,
+          stringId: stringId,
+          panelId: panelId,
+          key: uniqueKey,
+          v: baseStatus === "fault" ? 0 : (32 + Math.random()).toFixed(1), 
+          c: baseStatus === "fault" ? 0 : 9.1
+        };
+
+        row.push(cellData);
+        flatModules.push(cellData);
       }
     }
     matrix.push(row);
   }
-  return matrix;
+  return { matrix, flatModules, moduleCount: moduleCounter };
 };
 
-// Count exact number of dots (modules) in the grid
-const countRealModules = (matrix) => {
-  let count = 0;
-  matrix.forEach(row => row.forEach(cell => { if (cell !== 0) count++; }));
-  return count;
-};
+// --- 5. EXECUTE GENERATION ---
+const PROCESSED_ZONES = CONDITIONS.map(c => {
+  const data = generateZoneData(c.zone, c.temp);
+  return { ...c, ...data };
+});
 
-// --- THE PHYSICAL ZONES ---
-// I create the maps first, because they determine how much hardware I need.
-const matrixZ01 = generateZoneMatrix(12, 24); // North Field
-const matrixZ02 = generateZoneMatrix(10, 20); // East Array
-const matrixZ03 = generateZoneMatrix(14, 28); // South Block
-const matrixZ04 = generateZoneMatrix(8, 30);  // West Ext
+// --- 6. EXPORTS (TRANSFORMED FOR UI) ---
 
-// Count them immediately
-const countZ01 = countRealModules(matrixZ01);
-const countZ02 = countRealModules(matrixZ02);
-const countZ03 = countRealModules(matrixZ03);
-const countZ04 = countRealModules(matrixZ04);
+// A. SENSORS
+export const MOCK_SENSORS = CONDITIONS.flatMap(c => [
+  { id: `S-IRR-${c.zone.id.split('-')[1]}`, zoneId: c.zone.id, name: `Irradiance (${c.zone.name})`, type: "Irradiance", value: c.irradiance, unit: "W/m²", status: "normal" },
+  { id: `S-TMP-${c.zone.id.split('-')[1]}`, zoneId: c.zone.id, name: `Module Temp (${c.zone.name})`, type: "Temp", value: c.temp, unit: "°C", status: c.temp > 60 ? "warning" : "normal" },
+]);
 
-export const MOCK_STATION_MAP = {
-  zones: [
-    { id: "Z-01", name: "North Field", matrix: matrixZ01 },
-    { id: "Z-02", name: "East Array", matrix: matrixZ02 }, 
-    { id: "Z-03", name: "South Block", matrix: matrixZ03 }, 
-    { id: "Z-04", name: "West Ext", matrix: matrixZ04 }     
-  ]
-};
-
-// --- 2. ELECTRICAL LAYER GENERATION (Derived from Physical Counts) ---
-
-// This function "builts" the electrical system to match the module count
-const generateElectricalData = (zoneId, zoneName, totalModules) => {
-  const MODULES_PER_STRING = 20;
-  const STRINGS_PER_INVERTER = 8;
+// B. INVERTERS (Consistent Status Logic)
+export const MOCK_INVERTERS = PROCESSED_ZONES.flatMap(z => {
+  const count = z.zone.invCount;
+  // If Zone 4, entire zone is Offline
+  const isZoneDead = z.zone.id === "Z-04"; 
   
-  const inverters = [];
-  const modules = [];
+  const invCapacity = z.zone.capacity / count;
+  const zonePower = calculatePowerOutput(z.zone.capacity, z.irradiance, z.temp, isZoneDead);
+  const invPower = parseFloat((zonePower / count).toFixed(1));
 
-  // 1. Calculate how many strings we need
-  const totalStrings = Math.ceil(totalModules / MODULES_PER_STRING);
-  // 2. Calculate how many inverters we need for those strings
-  const totalInverters = Math.ceil(totalStrings / STRINGS_PER_INVERTER);
+  return Array(count).fill(null).map((_, i) => ({
+    id: `INV-${z.zone.id.split('-')[1]}-0${i+1}`, 
+    zoneId: z.zone.id,
+    zoneName: z.zone.name,
+    capacity: parseFloat(invCapacity.toFixed(0)),
+    currentPower: invPower,
+    efficiency: isZoneDead ? 0 : (z.temp > 60 ? 94.5 : 98.2), 
+    temp: isZoneDead ? 20 : z.temp + 5, // Cold if dead
+    // FORCE STATUS CONSISTENCY
+    status: isZoneDead ? "Offline" : (z.temp > 60 ? "Warning" : "Normal")
+  }));
+});
 
-  let modulesDistributed = 0;
-  let currentStringIndex = 1;
-
-  // 3. Build the Hardware Hierarchy
-  for (let i = 1; i <= totalInverters; i++) {
-    const invId = `INV-${zoneId.split('-')[1]}-${i.toString().padStart(2, '0')}`; // e.g., INV-01-01
-    
-    // Create Inverter
-    inverters.push({
-      id: invId,
-      zoneId: zoneId,
-      zoneName: zoneName,
-      status: Math.random() > 0.95 ? "Warning" : "Normal",
-      efficiency: (97 + Math.random() * 2).toFixed(1),
-      temp: Math.floor(40 + Math.random() * 20)
-    });
-
-    // Assign Strings to this Inverter
-    for (let s = 0; s < STRINGS_PER_INVERTER; s++) {
-      if (modulesDistributed >= totalModules) break; // Stop if we ran out of modules
-
-      // Determine size of this string (usually 20, but last one takes remainder)
-      const remaining = totalModules - modulesDistributed;
-      const stringSize = remaining > MODULES_PER_STRING ? MODULES_PER_STRING : remaining;
-      
-      const strId = `STR-${zoneId.split('-')[1]}-${currentStringIndex.toString().padStart(2, '0')}`;
-      
-      // Generate Panels for this string
-      const panels = Array(stringSize).fill(null).map((_, idx) => ({
-        v: (33 + Math.random()).toFixed(1),
-        c: (9 + Math.random() * 0.5).toFixed(1),
-        status: Math.random() > 0.99 ? "fault" : "normal"
-      }));
-
-      modules.push({
-        id: strId,
-        zoneId: zoneId,
-        zoneName: zoneName,
-        inverterId: invId,
-        status: panels.some(p => p.status === 'fault') ? 'error' : 'normal',
-        panels: panels
-      });
-
-      modulesDistributed += stringSize;
-      currentStringIndex++;
+// C. MODULE STRINGS
+export const MOCK_MODULES = PROCESSED_ZONES.flatMap(z => {
+  const stringsMap = {};
+  
+  z.flatModules.forEach(m => {
+    if (!stringsMap[m.stringId]) {
+      stringsMap[m.stringId] = {
+        id: m.stringId,
+        inverterId: `INV-${z.zone.id.split('-')[1]}-01`, 
+        zoneId: z.zone.id,
+        zoneName: z.zone.name,
+        status: "normal", 
+        panels: []
+      };
     }
-  }
+    stringsMap[m.stringId].panels.push(m);
+  });
 
-  return { inverters, modules };
+  return Object.values(stringsMap).map(str => {
+    // If Zone 4, force whole string Fault
+    if (str.zoneId === "Z-04") {
+      str.status = "fault";
+      return str;
+    }
+
+    const hasFault = str.panels.some(p => p.status === 'fault');
+    const hasWarning = str.panels.some(p => p.status === 'warning');
+    
+    if (hasFault) str.status = "fault";
+    else if (hasWarning) str.status = "warning";
+    else str.status = "normal";
+
+    return str;
+  });
+});
+
+// D. STATION MAP
+export const MOCK_STATION_MAP = {
+  zones: PROCESSED_ZONES.map(z => ({
+    id: z.zone.id, 
+    name: z.zone.name,
+    matrix: z.matrix
+  }))
 };
 
-// GENERATE ALL ELECTRICAL DATA DYNAMICALLY
-const elecZ01 = generateElectricalData("Z-01", "North Field", countZ01);
-const elecZ02 = generateElectricalData("Z-02", "East Array", countZ02);
-const elecZ03 = generateElectricalData("Z-03", "South Block", countZ03);
-const elecZ04 = generateElectricalData("Z-04", "West Ext", countZ04);
+// E. FIELD SUMMARY (Consistent Status Logic)
+export const MOCK_FIELD = PROCESSED_ZONES.map(z => {
+  const isZoneDead = z.zone.id === "Z-04";
+  
+  return {
+    id: z.zone.id,
+    name: z.zone.name,
+    power: calculatePowerOutput(z.zone.capacity, z.irradiance, z.temp, isZoneDead),
+    capacity: z.zone.capacity,
+    moduleCount: z.moduleCount,
+    // FORCE STATUS CONSISTENCY
+    status: isZoneDead ? "offline" : (z.temp > 60 ? "warning" : "normal"),
+    x: z.zone.id === 'Z-01' ? 20 : z.zone.id === 'Z-02' ? 70 : z.zone.id === 'Z-03' ? 30 : 65,
+    y: z.zone.id === 'Z-01' ? 30 : z.zone.id === 'Z-02' ? 25 : z.zone.id === 'Z-03' ? 70 : 65,
+  };
+});
 
-// EXPORT COMBINED DATA (This is what the UI reads)
-export const MOCK_INVERTERS = [
-  ...elecZ01.inverters, ...elecZ02.inverters, ...elecZ03.inverters, ...elecZ04.inverters
-];
-
-export const MOCK_MODULES = [
-  ...elecZ01.modules, ...elecZ02.modules, ...elecZ03.modules, ...elecZ04.modules
-];
-
-// --- 3. FIELD VIEW DATA (Synced) ---
-export const MOCK_FIELD = [
-  { id: "Z-01", name: "North Field", power: 420, capacity: 500, moduleCount: countZ01, status: "normal", x: 20, y: 30 },
-  { id: "Z-02", name: "East Array", power: 350, capacity: 600, moduleCount: countZ02, status: "warning", x: 70, y: 25 },
-  { id: "Z-03", name: "South Block", power: 100, capacity: 500, moduleCount: countZ03, status: "offline", x: 30, y: 70 },
-  { id: "Z-04", name: "West Ext", power: 280, capacity: 300, moduleCount: countZ04, status: "normal", x: 65, y: 65 },
-];
-
-// --- 4. STATION OVERVIEW & OTHER MOCK DATA (Static) ---
+// --- 5. STATION OVERVIEW & OTHER MOCK DATA (Static) ---
 export const MOCK_STATION_STATUS = {
   power: { value: 450.5, unit: "kW", trend: "up" },
   dailyEnergy: { value: 1250, unit: "kWh" },
@@ -160,14 +211,6 @@ export const MOCK_CAMERAS = [
   { id: "CAM-02", name: "Inverter Room A", status: "online", url: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80" },
   { id: "CAM-03", name: "PV Field North", status: "online", url: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=800&q=80" },
   { id: "CAM-04", name: "Substation", status: "offline", url: "" }, 
-];
-export const MOCK_SENSORS = [
-  { id: "S-01", name: "Global Irradiance", value: 865, unit: "W/m²", type: "sun", status: "normal", trend: "+12%" },
-  { id: "S-02", name: "Module Temp", value: 48.2, unit: "°C", type: "temp", status: "warning", trend: "+5%" },
-  { id: "S-03", name: "Ambient Temp", value: 32.5, unit: "°C", type: "temp", status: "normal", trend: "+2%" },
-  { id: "S-04", name: "Wind Speed", value: 3.4, unit: "m/s", type: "wind", status: "normal", trend: "-10%" },
-  { id: "S-05", name: "Humidity", value: 45, unit: "%", type: "water", status: "normal", trend: "0%" },
-  { id: "S-06", name: "Rainfall", value: 0, unit: "mm", type: "water", status: "normal", trend: "0%" },
 ];
 export const MOCK_ROBOTS = [
   { id: "R-01", name: "Cleaner Alpha", type: "cleaning", battery: 85, status: "working", location: "Zone A" },
