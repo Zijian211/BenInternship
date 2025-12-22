@@ -1,15 +1,14 @@
-// --- 1. CONFIGURATION ---
+// --- 1. CONFIGURATION (RENAMED FOR GEOGRAPHIC ACCURACY) ---
 const ZONES = {
-  Z01: { id: "Z-01", name: "North Field", capacity: 500, rows: 12, cols: 24, invCount: 2 }, 
-  Z02: { id: "Z-02", name: "South Field", capacity: 500, rows: 12, cols: 24, invCount: 2 },
-  Z03: { id: "Z-03", name: "East Array",  capacity: 300, rows: 10, cols: 20, invCount: 3 },
-  Z04: { id: "Z-04", name: "West Ext",    capacity: 200, rows: 8,  cols: 18, invCount: 2 }
+  Z01: { id: "Z-01", name: "North-West Field", capacity: 500, rows: 12, cols: 24, invCount: 2 }, 
+  Z02: { id: "Z-02", name: "North-East Field", capacity: 500, rows: 12, cols: 24, invCount: 2 },
+  Z03: { id: "Z-03", name: "South-West Field",  capacity: 300, rows: 10, cols: 20, invCount: 3 },
+  Z04: { id: "Z-04", name: "South-East Field",    capacity: 200, rows: 8,  cols: 18, invCount: 2 }
 };
 
 // --- 2. PHYSICS ENGINE ---
 const calculatePowerOutput = (capacityKw, irradiance, temp, isOffline = false) => {
-  if (isOffline) return 0; // If offline, 0 power
-  
+  if (isOffline) return 0; 
   const sunFactor = irradiance / 1000; 
   const heatLoss = temp > 25 ? (temp - 25) * 0.004 : 0; 
   const systemEff = 0.96;
@@ -19,17 +18,13 @@ const calculatePowerOutput = (capacityKw, irradiance, temp, isOffline = false) =
 
 // --- 3. FIELD CONDITIONS ---
 const CONDITIONS = [
-  // NORTH: Healthy
   { zone: ZONES.Z01, irradiance: 950, temp: 32, wind: 5.5 },
-  // SOUTH: Overheating (Warning)
   { zone: ZONES.Z02, irradiance: 960, temp: 68, wind: 1.2 },
-  // EAST: Cloudy
   { zone: ZONES.Z03, irradiance: 350, temp: 24, wind: 8.0 },
-  // WEST: CRITICAL FAULT (Offline)
   { zone: ZONES.Z04, irradiance: 880, temp: 29, wind: 4.5 },
 ];
 
-// --- 4. MAP & ID GENERATOR (THE CORE LOGIC) ---
+// --- 4. MAP & ID GENERATOR ---
 const generateZoneData = (zoneConfig, temp) => {
   const { rows, cols, id } = zoneConfig;
   const matrix = [];
@@ -40,29 +35,25 @@ const generateZoneData = (zoneConfig, temp) => {
 
   // Base Status Logic
   let baseStatus = "normal";
-  if (temp > 60) baseStatus = "warning"; // South Field
-  if (id === "Z-04") baseStatus = "fault"; // West Field (Hard Fault)
+  if (temp > 60) baseStatus = "warning"; // Overheating Zone
+  if (id === "Z-04") baseStatus = "fault"; // Broken Zone
 
   for (let r = 0; r < rows; r++) {
     const row = [];
     for (let c = 0; c < cols; c++) {
       
-      // --- LOGIC FOR VOIDS (White Spaces) ---
-      // 1. Structural Cuts (Corners & Roads)
+      // VOID LOGIC
       const isCornerCut = (r < 2 && c < 3) || (r > rows - 3 && c > cols - 4);
       const isCentralRoad = (c === Math.floor(cols / 2)); 
-      
-      // 2. Organic Random Voids (3% chance of a hole anywhere)
-      // This mimics real-world uneven terrain
-      const isRandomVoid = Math.random() > 0.97;
+      const isRandomVoid = Math.random() > 0.97; // 3% random gaps
 
       if (isCornerCut || isCentralRoad || isRandomVoid) {
-        row.push(null); // NULL = White Space
+        row.push(null); 
       } else {
-        // --- LOGIC FOR MODULES ---
+        // MODULE LOGIC
         moduleCounter++;
         
-        // Assign String/Panel IDs
+        // Assign IDs
         const currentStringNum = Math.ceil(moduleCounter / panelsPerString);
         const panelNumInString = ((moduleCounter - 1) % panelsPerString) + 1;
         
@@ -70,7 +61,7 @@ const generateZoneData = (zoneConfig, temp) => {
         const panelId = `P-${panelNumInString.toString().padStart(2, '0')}`;
         const uniqueKey = `${stringId}-${panelId}`;
 
-        // Random Fault Injection (1% chance), unless whole zone is faulted
+        // Random Fault Injection (1% chance)
         const isRandomBroken = Math.random() > 0.99; 
         let status = baseStatus;
         if (baseStatus !== "fault" && isRandomBroken) status = "fault";
@@ -100,7 +91,7 @@ const PROCESSED_ZONES = CONDITIONS.map(c => {
   return { ...c, ...data };
 });
 
-// --- 6. EXPORTS (TRANSFORMED FOR UI) ---
+// --- 6. EXPORTS ---
 
 // A. SENSORS
 export const MOCK_SENSORS = CONDITIONS.flatMap(c => [
@@ -108,27 +99,35 @@ export const MOCK_SENSORS = CONDITIONS.flatMap(c => [
   { id: `S-TMP-${c.zone.id.split('-')[1]}`, zoneId: c.zone.id, name: `Module Temp (${c.zone.name})`, type: "Temp", value: c.temp, unit: "°C", status: c.temp > 60 ? "warning" : "normal" },
 ]);
 
-// B. INVERTERS (Consistent Status Logic)
+// B. INVERTERS (FIX: ADDED VARIANCE "JITTER")
 export const MOCK_INVERTERS = PROCESSED_ZONES.flatMap(z => {
   const count = z.zone.invCount;
-  // If Zone 4, entire zone is Offline
   const isZoneDead = z.zone.id === "Z-04"; 
-  
   const invCapacity = z.zone.capacity / count;
   const zonePower = calculatePowerOutput(z.zone.capacity, z.irradiance, z.temp, isZoneDead);
-  const invPower = parseFloat((zonePower / count).toFixed(1));
+  
+  // Base power per inverter
+  const baseInvPower = zonePower / count;
 
-  return Array(count).fill(null).map((_, i) => ({
-    id: `INV-${z.zone.id.split('-')[1]}-0${i+1}`, 
-    zoneId: z.zone.id,
-    zoneName: z.zone.name,
-    capacity: parseFloat(invCapacity.toFixed(0)),
-    currentPower: invPower,
-    efficiency: isZoneDead ? 0 : (z.temp > 60 ? 94.5 : 98.2), 
-    temp: isZoneDead ? 20 : z.temp + 5, // Cold if dead
-    // FORCE STATUS CONSISTENCY
-    status: isZoneDead ? "Offline" : (z.temp > 60 ? "Warning" : "Normal")
-  }));
+  return Array(count).fill(null).map((_, i) => {
+    // 1. ADD RANDOM VARIANCE (± 1-2%)
+    const jitter = isZoneDead ? 0 : (Math.random() * 4 - 2);
+    const finalPower = Math.max(0, parseFloat((baseInvPower + jitter).toFixed(1)));
+    
+    // 2. Temperature Variance
+    const tempJitter = isZoneDead ? 0 : (Math.random() * 2 - 1);
+    
+    return {
+      id: `INV-${z.zone.id.split('-')[1]}-0${i+1}`, 
+      zoneId: z.zone.id,
+      zoneName: z.zone.name,
+      capacity: parseFloat(invCapacity.toFixed(0)),
+      currentPower: finalPower,
+      efficiency: isZoneDead ? 0 : (z.temp > 60 ? 94.5 : 98.2), 
+      temp: parseFloat((isZoneDead ? 20 : z.temp + 5 + tempJitter).toFixed(1)),
+      status: isZoneDead ? "Offline" : (z.temp > 60 ? "Warning" : "Normal")
+    };
+  });
 });
 
 // C. MODULE STRINGS
@@ -137,9 +136,14 @@ export const MOCK_MODULES = PROCESSED_ZONES.flatMap(z => {
   
   z.flatModules.forEach(m => {
     if (!stringsMap[m.stringId]) {
+      // Distribute strings among available inverters
+      const stringNum = parseInt(m.stringId.split('-')[2]);
+      const invIndex = (stringNum - 1) % z.zone.invCount;
+      const assignedInvId = `INV-${z.zone.id.split('-')[1]}-0${invIndex + 1}`;
+
       stringsMap[m.stringId] = {
         id: m.stringId,
-        inverterId: `INV-${z.zone.id.split('-')[1]}-01`, 
+        inverterId: assignedInvId,
         zoneId: z.zone.id,
         zoneName: z.zone.name,
         status: "normal", 
@@ -150,19 +154,15 @@ export const MOCK_MODULES = PROCESSED_ZONES.flatMap(z => {
   });
 
   return Object.values(stringsMap).map(str => {
-    // If Zone 4, force whole string Fault
     if (str.zoneId === "Z-04") {
       str.status = "fault";
       return str;
     }
-
     const hasFault = str.panels.some(p => p.status === 'fault');
     const hasWarning = str.panels.some(p => p.status === 'warning');
-    
     if (hasFault) str.status = "fault";
     else if (hasWarning) str.status = "warning";
     else str.status = "normal";
-
     return str;
   });
 });
@@ -176,24 +176,22 @@ export const MOCK_STATION_MAP = {
   }))
 };
 
-// E. FIELD SUMMARY (Consistent Status Logic)
+// E. FIELD SUMMARY (COORDINATE MATCHING)
 export const MOCK_FIELD = PROCESSED_ZONES.map(z => {
   const isZoneDead = z.zone.id === "Z-04";
-  
   return {
     id: z.zone.id,
     name: z.zone.name,
     power: calculatePowerOutput(z.zone.capacity, z.irradiance, z.temp, isZoneDead),
     capacity: z.zone.capacity,
     moduleCount: z.moduleCount,
-    // FORCE STATUS CONSISTENCY
     status: isZoneDead ? "offline" : (z.temp > 60 ? "warning" : "normal"),
     x: z.zone.id === 'Z-01' ? 20 : z.zone.id === 'Z-02' ? 70 : z.zone.id === 'Z-03' ? 30 : 65,
     y: z.zone.id === 'Z-01' ? 30 : z.zone.id === 'Z-02' ? 25 : z.zone.id === 'Z-03' ? 70 : 65,
   };
 });
 
-// --- 5. STATION OVERVIEW & OTHER MOCK DATA (Static) ---
+// --- 7. STATION OVERVIEW & OTHER MOCK DATA (Static) ---
 export const MOCK_STATION_STATUS = {
   power: { value: 450.5, unit: "kW", trend: "up" },
   dailyEnergy: { value: 1250, unit: "kWh" },
